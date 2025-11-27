@@ -1,2 +1,9 @@
-aiogram==3.3.0
-yt-dlp==2024.3.10
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    chunkSizeWarningLimit: 1000
+  }
+});
