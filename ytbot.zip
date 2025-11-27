@@ -1,94 +1,14 @@
-import asyncio
-import sqlite3
-import yt_dlp
-import os
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # токен зададим через переменные окружения
-bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
-
-# база
-conn = sqlite3.connect("channels.db")
-cursor = conn.cursor()
-cursor.execute("""CREATE TABLE IF NOT EXISTS channels (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    url TEXT UNIQUE
-)""")
-conn.commit()
-
-def add_channel(url: str):
-    try:
-        cursor.execute("INSERT INTO channels (url) VALUES (?)", (url,))
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
-
-def get_channels():
-    cursor.execute("SELECT url FROM channels")
-    return [r[0] for r in cursor.fetchall()]
-
-async def download_last_videos(channel_url, limit=3):
-    ydl_opts = {
-        "format": "bestvideo[height<=1080]+bestaudio/best[height<=720]",
-        "noplaylist": True,
-        "quiet": True,
-        "outtmpl": "%(title)s.%(ext)s",
-    }
-
-    with yt_dlp.YoutubeDL({"quiet": True}) as ydl:
-        info = ydl.extract_info(channel_url, download=False)
-        if "entries" in info:
-            videos = info["entries"][:limit]
-        else:
-            return []
-
-    downloaded = []
-    for video in videos:
-        url = f"https://www.youtube.com/watch?v={video['id']}"
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info(url, download=True)
-            downloaded.append(ydl.prepare_filename(result))
-    return downloaded
-
-@dp.message(Command("start"))
-async def start_cmd(msg: types.Message):
-    await msg.answer("Привет! Отправь мне ссылку на YouTube-канал. Команда /video — скачать последние 3 видео.")
-
-@dp.message(Command("video"))
-async def video_cmd(msg: types.Message):
-    channels = get_channels()
-    if not channels:
-        await msg.answer("Нет сохранённых каналов.")
-        return
-    for ch in channels:
-        await msg.answer(f"🔽 Скачиваю видео с {ch}...")
-        vids = await download_last_videos(ch)
-        for v in vids:
-            try:
-                await msg.answer_video(open(v, "rb"))
-            except Exception:
-                await msg.answer(f"Не удалось отправить {v}")
-            finally:
-                if os.path.exists(v):
-                    os.remove(v)
-
-@dp.message()
-async def add_channel_cmd(msg: types.Message):
-    text = msg.text.strip()
-    if "youtube.com" in text or "youtu.be" in text:
-        added = add_channel(text)
-        if added:
-            await msg.answer("✅ Канал добавлен!")
-        else:
-            await msg.answer("⚠️ Уже есть в базе.")
-    else:
-        await msg.answer("Отправь ссылку на YouTube-канал.")
-
-async def main():
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Video Maker TT</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0ea5a4" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
